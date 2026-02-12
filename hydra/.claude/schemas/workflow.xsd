@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+    <!-- Elemento raiz: workflow -->
+    <xs:element name="workflow">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="metadata"/>
+                <xs:element ref="output_config" minOccurs="0"/>
+                <xs:element ref="agents" minOccurs="0"/>
+                <xs:element ref="steps"/>
+                <xs:element ref="rules" minOccurs="0"/>
+                <xs:element ref="final_outputs" minOccurs="0"/>
+            </xs:sequence>
+            <xs:attribute name="id" type="xs:string" use="required"/>
+            <xs:attribute name="version" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Metadata -->
+    <xs:element name="metadata">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="name" type="xs:string"/>
+                <xs:element name="description" type="xs:string"/>
+                <xs:element name="capability" type="xs:string"/>
+                <xs:element name="command" type="xs:string"/>
+                <xs:element name="start_step" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Output Config -->
+    <xs:element name="output_config">
+        <xs:complexType>
+            <xs:attribute name="base_dir" type="xs:string" use="required"/>
+            <xs:attribute name="debug" type="xs:string" use="optional" default="false"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Agents -->
+    <xs:element name="agents">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="agent" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:attribute name="id" type="xs:string" use="required"/>
+                        <xs:attribute name="capability" type="xs:string" use="required"/>
+                        <xs:attribute name="file" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Steps -->
+    <xs:element name="steps">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="step" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="description" type="xs:string"/>
+                            <xs:choice>
+                                <!-- Step com agent: NÃO pode ter instruction -->
+                                <xs:sequence>
+                                    <xs:element name="agent">
+                                        <xs:complexType>
+                                            <xs:attribute name="ref" type="xs:string" use="required"/>
+                                            <xs:attribute name="task" type="xs:string" use="required"/>
+                                        </xs:complexType>
+                                    </xs:element>
+                                    <xs:element ref="inputs" minOccurs="0"/>
+                                    <xs:element ref="prompts" minOccurs="0"/>
+                                    <xs:element ref="outputs" minOccurs="0"/>
+                                </xs:sequence>
+                                <!-- Step sem agent: PODE ter instruction -->
+                                <xs:sequence>
+                                    <xs:element ref="inputs" minOccurs="0"/>
+                                    <xs:element name="instruction" type="xs:string" minOccurs="0"/>
+                                    <xs:element ref="prompts" minOccurs="0"/>
+                                    <xs:element ref="outputs" minOccurs="0"/>
+                                </xs:sequence>
+                            </xs:choice>
+                        </xs:sequence>
+                        <xs:attribute name="id" type="xs:string" use="required"/>
+                        <xs:attribute name="execution" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Inputs -->
+    <xs:element name="inputs">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="in" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:attribute name="name" type="xs:string" use="required"/>
+                        <xs:attribute name="from" type="xs:string" use="required"/>
+                        <xs:attribute name="required" type="xs:string" use="optional"/>
+                        <xs:attribute name="default" type="xs:string" use="optional"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Prompts -->
+    <xs:element name="prompts">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="prompt" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:simpleContent>
+                            <xs:extension base="xs:string">
+                                <xs:attribute name="name" type="xs:string" use="required"/>
+                                <xs:attribute name="order" type="xs:string" use="required"/>
+                                <xs:attribute name="if" type="xs:string" use="optional"/>
+                                <xs:attribute name="required" type="xs:string" use="optional"/>
+                                <xs:attribute name="validate" type="xs:string" use="optional"/>
+                                <xs:attribute name="values" type="xs:string" use="optional"/>
+                            </xs:extension>
+                        </xs:simpleContent>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Outputs -->
+    <xs:element name="outputs">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="out" maxOccurs="unbounded">
+                    <xs:complexType mixed="true">
+                        <xs:attribute name="name" type="xs:string" use="required"/>
+                        <xs:attribute name="target" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Rules -->
+    <xs:element name="rules">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="rule" maxOccurs="unbounded">
+                    <xs:complexType mixed="true">
+                        <xs:attribute name="if" type="xs:string" use="required"/>
+                        <xs:attribute name="action" type="xs:string" use="required"/>
+                        <xs:attribute name="step" type="xs:string" use="optional"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Final Outputs -->
+    <xs:element name="final_outputs">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="out" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:attribute name="name" type="xs:string" use="required"/>
+                        <xs:attribute name="from" type="xs:string" use="required"/>
+                        <xs:attribute name="type" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

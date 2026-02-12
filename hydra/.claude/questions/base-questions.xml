@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feedback_questions id="base_questions" version="2.0">
+    <metadata>
+        <name>Perguntas Base de Feedback</name>
+        <description>Questionário base comum a todas capabilities - Mapeamento para AskUserQuestion</description>
+        <capability>feedback</capability>
+        <tool>AskUserQuestion</tool>
+    </metadata>
+
+    <!-- ETAPA 1: Ratings Principais (4 perguntas) -->
+    <question_set id="etapa1_ratings" max_questions="3">
+        <question id="output_quality" type="rating" required="true">
+            <text>Qual a qualidade do output gerado?</text>
+            <header>Qualidade</header>
+            <multiSelect>false</multiSelect>
+            <options>
+                <option value="1" label="1 - Muito baixa">
+                    <description>Output com muitos problemas ou incompleto</description>
+                </option>
+                <option value="2" label="2 - Baixa">
+                    <description>Output funcional mas com vários problemas</description>
+                </option>
+                <option value="3" label="3 - Adequada">
+                    <description>Output atende aos requisitos básicos</description>
+                </option>
+                <option value="4" label="4 - Boa">
+                    <description>Output bem estruturado e completo</description>
+                </option>
+            </options>
+        </question>
+
+        <question id="usability" type="rating" required="true">
+            <text>Como você avalia a usabilidade e facilidade de uso do workflow?</text>
+            <header>Usabilidade</header>
+            <multiSelect>false</multiSelect>
+            <options>
+                <option value="1" label="1 - Muito difícil">
+                    <description>Processo confuso e difícil de usar</description>
+                </option>
+                <option value="2" label="2 - Difícil">
+                    <description>Processo tem várias barreiras de uso</description>
+                </option>
+                <option value="3" label="3 - Adequado">
+                    <description>Processo utilizável com aprendizado</description>
+                </option>
+                <option value="4" label="4 - Fácil">
+                    <description>Processo intuitivo e fácil de usar</description>
+                </option>
+            </options>
+        </question>
+
+        <question id="speed" type="rating" required="true">
+            <text>Como você avalia a velocidade de execução?</text>
+            <header>Velocidade</header>
+            <multiSelect>false</multiSelect>
+            <options>
+                <option value="1" label="1 - Muito lenta">
+                    <description>Tempo de execução inaceitavelmente longo</description>
+                </option>
+                <option value="2" label="2 - Lenta">
+                    <description>Tempo de execução acima do esperado</description>
+                </option>
+                <option value="3" label="3 - Adequada">
+                    <description>Tempo de execução aceitável</description>
+                </option>
+                <option value="4" label="4 - Rápida">
+                    <description>Tempo de execução dentro ou acima das expectativas</description>
+                </option>
+            </options>
+        </question>
+    </question_set>
+
+    <!-- ETAPA 2: Feedback Qualitativo (perguntas opcionais) -->
+    <question_set id="etapa2_qualitative" max_questions="1">
+        <question id="how_was_it" type="text" required="false">
+            <text>Como foi esta execução?</text>
+            <header>Feedback Qualitativo</header>
+        </question>
+    </question_set>
+</feedback_questions>

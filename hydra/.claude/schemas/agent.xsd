@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+    <!-- Tipo simples para modelo -->
+    <xs:simpleType name="modelType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="sonnet"/>
+            <xs:enumeration value="opus"/>
+            <xs:enumeration value="haiku"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Tipo simples para cor -->
+    <xs:simpleType name="colorType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="#[0-9A-Fa-f]{6}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Elemento raiz: agent -->
+    <xs:element name="agent">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="metadata"/>
+                <xs:element ref="profile"/>
+                <xs:element ref="tasks"/>
+            </xs:sequence>
+            <xs:attribute name="id" type="xs:string" use="required"/>
+            <xs:attribute name="version" type="xs:string" use="required"/>
+            <xs:attribute name="model" type="modelType" use="optional"/>
+            <xs:attribute name="color" type="colorType" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Metadata -->
+    <xs:element name="metadata">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="name" type="xs:string"/>
+                <xs:element name="description" type="xs:string"/>
+                <xs:element name="capability" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Profile -->
+    <xs:element name="profile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="role" type="xs:string"/>
+                <xs:element name="goal" type="xs:string"/>
+                <xs:element name="style" type="xs:string"/>
+                <xs:element ref="expertise"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Expertise -->
+    <xs:element name="expertise">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="area" type="xs:string" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Tasks -->
+    <xs:element name="tasks">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="task" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="instruction" type="xs:string"/>
+                            <xs:element ref="reference_templates" minOccurs="0"/>
+                            <xs:element ref="inputs" minOccurs="0"/>
+                            <xs:element ref="outputs" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="id" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Inputs -->
+    <xs:element name="inputs">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="input" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="description" type="xs:string"/>
+                        </xs:sequence>
+                        <xs:attribute name="name" type="xs:string" use="required"/>
+                        <xs:attribute name="type" type="xs:string" use="required"/>
+                        <xs:attribute name="required" type="xs:string" use="optional"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Outputs -->
+    <xs:element name="outputs">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="output" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="description" type="xs:string"/>
+                            <xs:element name="format" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="name" type="xs:string" use="required"/>
+                        <xs:attribute name="storage" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Reference Templates -->
+    <xs:element name="reference_templates">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="template" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="file" type="xs:string"/>
+                            <xs:element name="usage" type="xs:string"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
