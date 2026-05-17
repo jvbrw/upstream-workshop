@@ -14,7 +14,6 @@ import {
 } from "@remixicon/react";
 import { ProgressRing } from "@/components/dashboard/progress-ring";
 import { GoalCelebration } from "@/components/dashboard/goal-celebration";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import {
   useHydrationStore,
   useTodayLogs,
@@ -32,6 +31,7 @@ export default function TodayPage() {
 
   const [showCustom, setShowCustom] = useState(false);
   const [customAmount, setCustomAmount] = useState("350");
+  const [customError, setCustomError] = useState("");
   const [lastLogged, setLastLogged] = useState<number | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const prevGoalReached = useRef(false);
@@ -55,8 +55,16 @@ export default function TodayPage() {
   function handleCustomLog() {
     const amount = parseInt(customAmount, 10);
     if (amount > 0 && amount <= 5000) {
+      setCustomError("");
       handleLog(amount);
+    } else {
+      setCustomError("Enter 1–5000ml");
     }
+  }
+
+  function closeCustom() {
+    setShowCustom(false);
+    setCustomError("");
   }
 
   const today = new Date();
@@ -84,17 +92,14 @@ export default function TodayPage() {
             })}
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          {streak > 0 && (
-            <Link href="/social">
-              <Badge variant="secondary" className="gap-1 px-3 py-1 text-sm">
-                <RiFireLine className="size-4 text-orange-500" />
-                {streak} day{streak !== 1 ? "s" : ""}
-              </Badge>
-            </Link>
-          )}
-          <ThemeToggle />
-        </div>
+        {streak > 0 && (
+          <Link href="/social">
+            <Badge variant="secondary" className="gap-1 px-3 py-1 text-sm">
+              <RiFireLine className="size-4 text-orange-500" />
+              {streak} day{streak !== 1 ? "s" : ""}
+            </Badge>
+          </Link>
+        )}
       </div>
 
       {/* Progress Ring */}
@@ -127,7 +132,7 @@ export default function TodayPage() {
           <Button
             variant={showCustom ? "default" : "outline"}
             className="h-12"
-            onClick={() => setShowCustom(!showCustom)}
+            onClick={() => (showCustom ? closeCustom() : setShowCustom(true))}
           >
             <RiAddLine className="size-5" />
           </Button>
@@ -139,8 +144,18 @@ export default function TodayPage() {
               <input
                 type="number"
                 value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-center text-lg font-semibold outline-none focus:border-primary"
+                onChange={(e) => {
+                  setCustomAmount(e.target.value);
+                  if (customError) setCustomError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCustomLog();
+                  if (e.key === "Escape") closeCustom();
+                }}
+                aria-label="Custom amount in milliliters"
+                className={`h-10 w-full rounded-lg border bg-transparent px-3 text-center text-lg font-semibold outline-none focus:border-primary ${
+                  customError ? "border-destructive" : "border-input"
+                }`}
                 min={1}
                 max={5000}
                 autoFocus
@@ -157,12 +172,15 @@ export default function TodayPage() {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setShowCustom(false)}
+                onClick={closeCustom}
                 className="shrink-0"
               >
                 <RiCloseLine className="size-4" />
               </Button>
             </CardContent>
+            {customError && (
+              <p className="px-3 pb-2 text-xs text-destructive">{customError}</p>
+            )}
           </Card>
         )}
       </div>

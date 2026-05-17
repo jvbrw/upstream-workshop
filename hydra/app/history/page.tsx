@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RiShareLine } from "@remixicon/react";
 import { useHydrationStore } from "@/hooks/use-hydration-store";
+import { cn } from "@/lib/utils";
 
 type DaySummary = {
   date: Date;
@@ -89,13 +88,61 @@ function getStats(
   return { avgIntake, goalRate, bestStreak, totalDays: dailyTotals.length };
 }
 
+function buildDayMap(logs: { timestamp: string; amount: number }[]) {
+  const map = new Map<string, number>();
+  logs.forEach((log) => {
+    const day = new Date(log.timestamp).toISOString().split("T")[0];
+    map.set(day, (map.get(day) ?? 0) + log.amount);
+  });
+  return map;
+}
+
+const WEEK_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
 export default function HistoryPage() {
   const logs = useHydrationStore((s) => s.logs);
   const dailyGoal = useHydrationStore((s) => s.dailyGoal);
+  const [period, setPeriod] = useState<"week" | "month">("week");
 
   const weekData = getLast7Days(logs, dailyGoal);
   const maxTotal = Math.max(...weekData.map((d) => d.total), dailyGoal);
   const stats = getStats(logs, dailyGoal);
+
+  const monthData = useMemo(() => {
+    const dayMap = buildDayMap(logs);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const days: {
+      date: Date;
+      dayOfMonth: number;
+      total: number;
+      hitGoal: boolean;
+      intensity: number;
+      key: string;
+    }[] = [];
+
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split("T")[0];
+      const total = dayMap.get(key) ?? 0;
+      const intensity = Math.min(total / dailyGoal, 1);
+
+      days.push({
+        date,
+        dayOfMonth: date.getDate(),
+        total,
+        hitGoal: total >= dailyGoal,
+        intensity,
+        key,
+      });
+    }
+
+    // Padding: how many empty cells before the first day to align with weekday
+    const firstDayOfWeek = days[0].date.getDay(); // 0=Sun
+    return { days, paddingBefore: firstDayOfWeek };
+  }, [logs, dailyGoal]);
 
   if (logs.length === 0) {
     return (
@@ -110,84 +157,166 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6 pb-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">History</h1>
-        <p className="text-sm text-muted-foreground">Last 7 days</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">History</h1>
+          <p className="text-sm text-muted-foreground">
+            {period === "week" ? "Last 7 days" : "Last 30 days"}
+          </p>
+        </div>
+
+        {/* Segmented Control */}
+        <div className="flex rounded-full bg-muted p-1">
+          <button
+            aria-pressed={period === "week"}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+              period === "week"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setPeriod("week")}
+          >
+            Week
+          </button>
+          <button
+            aria-pressed={period === "month"}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+              period === "month"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setPeriod("month")}
+          >
+            Month
+          </button>
+        </div>
       </div>
 
       {/* Weekly Chart */}
-      <Card>
-        <CardContent>
-          {/* Legend */}
-          <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-4 border-t border-dashed border-muted-foreground/40" />
-              <span>
-                Goal (
-                {dailyGoal >= 1000
-                  ? `${dailyGoal / 1000}L`
-                  : `${dailyGoal}ml`}
-                )
-              </span>
+      {period === "week" && (
+        <Card>
+          <CardContent>
+            <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-4 border-t border-dashed border-muted-foreground/40" />
+                <span>
+                  Goal (
+                  {dailyGoal >= 1000
+                    ? `${dailyGoal / 1000}L`
+                    : `${dailyGoal}ml`}
+                  )
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block size-2.5 rounded-sm bg-emerald-500/80" />
+                <span>Goal met</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block size-2.5 rounded-sm bg-emerald-500/80" />
-              <span>Goal met</span>
-            </div>
-          </div>
-          <div className="flex items-end justify-between gap-2">
-            {weekData.map((day) => {
-              const height = maxTotal > 0 ? (day.total / maxTotal) * 140 : 0;
-              const isToday =
-                day.date.toDateString() === new Date().toDateString();
+            <div className="flex items-end justify-between gap-2">
+              {weekData.map((day) => {
+                const height = maxTotal > 0 ? (day.total / maxTotal) * 140 : 0;
+                const isToday =
+                  day.date.toDateString() === new Date().toDateString();
 
-              return (
-                <div
-                  key={day.label}
-                  className="flex flex-1 flex-col items-center gap-2"
-                >
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    {day.total >= 1000
-                      ? `${Math.round(day.total / 100) / 10}L`
-                      : day.total > 0
-                        ? `${day.total}`
-                        : "—"}
-                  </span>
-
-                  <div className="relative flex h-[140px] w-full items-end">
-                    <div
-                      className="absolute left-0 right-0 border-t border-dashed border-muted-foreground/20"
-                      style={{
-                        bottom: `${(dailyGoal / maxTotal) * 140}px`,
-                      }}
-                    />
-                    <div
-                      className={`w-full rounded-t-md motion-safe:transition-all motion-safe:duration-500 ${
-                        day.hitGoal
-                          ? "bg-emerald-500/80"
-                          : isToday
-                            ? "bg-primary"
-                            : "bg-primary/40"
-                      }`}
-                      style={{ height: `${Math.max(height, 4)}px` }}
-                    />
-                  </div>
-
-                  <span
-                    className={`text-xs ${
-                      isToday
-                        ? "font-semibold text-foreground"
-                        : "text-muted-foreground"
-                    }`}
+                return (
+                  <div
+                    key={day.label}
+                    className="flex flex-1 flex-col items-center gap-2"
                   >
-                    {day.shortLabel}
-                  </span>
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      {day.total >= 1000
+                        ? `${Math.round(day.total / 100) / 10}L`
+                        : day.total > 0
+                          ? `${day.total}`
+                          : "—"}
+                    </span>
+
+                    <div className="relative flex h-[140px] w-full items-end">
+                      <div
+                        className="absolute left-0 right-0 border-t border-dashed border-muted-foreground/20"
+                        style={{
+                          bottom: `${(dailyGoal / maxTotal) * 140}px`,
+                        }}
+                      />
+                      <div
+                        className={`w-full rounded-t-md motion-safe:transition-all motion-safe:duration-500 ${
+                          day.hitGoal
+                            ? "bg-emerald-500/80"
+                            : isToday
+                              ? "bg-primary"
+                              : "bg-primary/40"
+                        }`}
+                        style={{ height: `${Math.max(height, 4)}px` }}
+                      />
+                    </div>
+
+                    <span
+                      className={`text-xs ${
+                        isToday
+                          ? "font-semibold text-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {day.shortLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Monthly Heat Map */}
+      {period === "month" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Last 30 days</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Weekday labels */}
+            <div className="mb-1 grid grid-cols-7 gap-1.5">
+              {WEEK_LABELS.map((label, i) => (
+                <div
+                  key={i}
+                  className="text-center text-[10px] font-medium text-muted-foreground"
+                >
+                  {label}
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {/* Padding cells */}
+              {Array.from({ length: monthData.paddingBefore }, (_, i) => (
+                <div key={`pad-${i}`} />
+              ))}
+              {/* Day cells */}
+              {monthData.days.map((day) => (
+                <div
+                  key={day.key}
+                  className={cn(
+                    "flex aspect-square items-center justify-center rounded-lg text-[10px] font-medium",
+                    day.hitGoal
+                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                      : day.intensity > 0
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
+                  )}
+                  style={{
+                    opacity: day.intensity > 0 ? 0.4 + day.intensity * 0.6 : 0.5,
+                  }}
+                  title={`${day.date.toLocaleDateString()}: ${day.total}ml`}
+                >
+                  {day.dayOfMonth}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
@@ -226,74 +355,6 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* 14-day overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Last 14 days</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 14 }, (_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() - (13 - i));
-              date.setHours(0, 0, 0, 0);
-
-              const nextDay = new Date(date);
-              nextDay.setDate(nextDay.getDate() + 1);
-
-              const dayTotal = logs
-                .filter((log) => {
-                  const t = new Date(log.timestamp);
-                  return t >= date && t < nextDay;
-                })
-                .reduce((sum, log) => sum + log.amount, 0);
-
-              const intensity = Math.min(dayTotal / dailyGoal, 1);
-              const hitGoal = dayTotal >= dailyGoal;
-
-              return (
-                <div
-                  key={i}
-                  className={`flex aspect-square items-center justify-center rounded-lg text-[10px] font-medium ${
-                    hitGoal
-                      ? "bg-emerald-500/20 text-emerald-600"
-                      : intensity > 0
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground"
-                  }`}
-                  style={{
-                    opacity: intensity > 0 ? 0.4 + intensity * 0.6 : 0.5,
-                  }}
-                  title={`${date.toLocaleDateString()}: ${dayTotal}ml`}
-                >
-                  {date.getDate()}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Weekly recap share CTA */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex items-center gap-4">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              Weekly Recap
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Share a beautiful summary of your week
-            </p>
-          </div>
-          <Link href="/social">
-            <Button size="sm" className="gap-1.5">
-              <RiShareLine className="size-4" />
-              Share
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
     </div>
   );
 }

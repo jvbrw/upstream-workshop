@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -78,33 +78,64 @@ function groupByDay(logs: HydrationLog[]): DayGroup[] {
 
 function LogEntry({
   log,
+  isEditing,
+  onStartEdit,
+  onCancelEdit,
   onDelete,
   onEdit,
 }: {
   log: HydrationLog;
+  isEditing: boolean;
+  onStartEdit: (id: string) => void;
+  onCancelEdit: () => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newAmount: number) => void;
 }) {
-  const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(log.amount));
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (isEditing) {
+      setEditValue(String(log.amount));
+      setHasError(false);
+    }
+  }, [isEditing, log.amount]);
 
   function handleSave() {
     const amount = parseInt(editValue, 10);
     if (amount > 0 && amount <= 5000) {
       onEdit(log.id, amount);
-      setEditing(false);
+      onCancelEdit();
+    } else {
+      setHasError(true);
     }
+  }
+
+  function handleCancel() {
+    setEditValue(String(log.amount));
+    setHasError(false);
+    onCancelEdit();
   }
 
   return (
     <div className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3">
-      {editing ? (
+      {isEditing ? (
         <>
           <input
             type="number"
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="h-8 w-20 rounded-md border border-input bg-transparent px-2 text-center font-medium outline-none focus:border-primary"
+            onChange={(e) => {
+              setEditValue(e.target.value);
+              if (hasError) setHasError(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSave();
+              if (e.key === "Escape") handleCancel();
+            }}
+            aria-label="Edit amount in milliliters"
+            className={`h-8 w-20 rounded-md border bg-transparent px-2 text-center font-medium outline-none focus:border-primary ${
+              hasError ? "border-destructive" : "border-input"
+            }`}
             min={1}
             max={5000}
             autoFocus
@@ -114,14 +145,7 @@ function LogEntry({
             <Button size="icon-xs" variant="default" onClick={handleSave}>
               <RiCheckLine className="size-3" />
             </Button>
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              onClick={() => {
-                setEditing(false);
-                setEditValue(String(log.amount));
-              }}
-            >
+            <Button size="icon-xs" variant="ghost" onClick={handleCancel}>
               <RiCloseLine className="size-3" />
             </Button>
           </div>
@@ -140,7 +164,7 @@ function LogEntry({
             <Button
               size="icon-xs"
               variant="ghost"
-              onClick={() => setEditing(true)}
+              onClick={() => onStartEdit(log.id)}
             >
               <RiPencilLine className="size-3" />
             </Button>
@@ -179,6 +203,7 @@ export default function ManagePage() {
   const logs = useHydrationStore((s) => s.logs);
   const deleteLog = useHydrationStore((s) => s.deleteLog);
   const editLog = useHydrationStore((s) => s.editLog);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const groups = groupByDay(logs);
 
@@ -217,6 +242,9 @@ export default function ManagePage() {
                 <LogEntry
                   key={log.id}
                   log={log}
+                  isEditing={editingId === log.id}
+                  onStartEdit={setEditingId}
+                  onCancelEdit={() => setEditingId(null)}
                   onDelete={deleteLog}
                   onEdit={editLog}
                 />

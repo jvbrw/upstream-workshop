@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ import {
 import { useHydrationStore } from "@/hooks/use-hydration-store";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
-const GOAL_OPTIONS = [1500, 2000, 2500, 3000, 3500];
+const GOAL_SHORTCUTS = [1500, 2000, 2500, 3000];
 
 export default function SettingsPage() {
   const dailyGoal = useHydrationStore((s) => s.dailyGoal);
@@ -34,31 +34,80 @@ export default function SettingsPage() {
   const setPresets = useHydrationStore((s) => s.setPresets);
   const clearAllData = useHydrationStore((s) => s.clearAllData);
 
+  const [goalInput, setGoalInput] = useState(String(dailyGoal));
   const [showAddPreset, setShowAddPreset] = useState(false);
   const [newPreset, setNewPreset] = useState("250");
+  const [presetError, setPresetError] = useState("");
+  const [showSaved, setShowSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const triggerSaved = useCallback(() => {
+    setShowSaved(true);
+    clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setShowSaved(false), 1500);
+  }, []);
+
+  function applyGoal(value: number) {
+    const clamped = Math.round(Math.min(Math.max(value, 500), 5000) / 100) * 100;
+    setGoalInput(String(clamped));
+    setDailyGoal(clamped);
+    triggerSaved();
+  }
+
+  function handleGoalBlur() {
+    const parsed = parseInt(goalInput, 10);
+    if (!isNaN(parsed)) {
+      applyGoal(parsed);
+    } else {
+      setGoalInput(String(dailyGoal));
+    }
+  }
+
+  function handleGoalKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      (e.target as HTMLInputElement).blur();
+    }
+  }
 
   function handleAddPreset() {
     const amount = parseInt(newPreset, 10);
-    if (amount > 0 && amount <= 5000 && !presets.includes(amount)) {
-      setPresets([...presets, amount].sort((a, b) => a - b));
-      setShowAddPreset(false);
-      setNewPreset("250");
+    if (isNaN(amount) || amount < 50 || amount > 2000) {
+      setPresetError("Enter 50–2000ml");
+      return;
     }
+    if (presets.includes(amount)) {
+      setPresetError("Already exists");
+      return;
+    }
+    setPresets([...presets, amount].sort((a, b) => a - b));
+    setShowAddPreset(false);
+    setNewPreset("250");
+    setPresetError("");
+    triggerSaved();
   }
 
   function handleRemovePreset(amount: number) {
     if (presets.length > 1) {
       setPresets(presets.filter((p) => p !== amount));
+      triggerSaved();
     }
   }
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6 pb-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Customize your hydration goals
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Customize your hydration goals
+          </p>
+        </div>
+        {showSaved && (
+          <span className="flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            <RiCheckLine className="size-4" />
+            Saved
+          </span>
+        )}
       </div>
 
       {/* Daily Goal */}
@@ -66,17 +115,35 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Daily goal</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-2">
-            {GOAL_OPTIONS.map((goal) => (
-              <Button
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              onBlur={handleGoalBlur}
+              onKeyDown={handleGoalKeyDown}
+              aria-label="Daily goal in milliliters"
+              className="h-12 w-full rounded-lg border border-input bg-transparent px-3 text-center text-xl font-bold outline-none focus:border-primary"
+              min={500}
+              max={5000}
+              step={100}
+            />
+            <span className="text-sm font-medium text-muted-foreground">ml</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {GOAL_SHORTCUTS.map((goal) => (
+              <button
                 key={goal}
-                variant={dailyGoal === goal ? "default" : "outline"}
-                className="h-12 text-base font-semibold"
-                onClick={() => setDailyGoal(goal)}
+                onClick={() => applyGoal(goal)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  dailyGoal === goal
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {goal >= 1000 ? `${goal / 1000}L` : `${goal}ml`}
-              </Button>
+              </button>
             ))}
           </div>
         </CardContent>
@@ -89,7 +156,10 @@ export default function SettingsPage() {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setShowAddPreset(!showAddPreset)}
+            onClick={() => {
+              setShowAddPreset(!showAddPreset);
+              setPresetError("");
+            }}
           >
             {showAddPreset ? (
               <RiCloseLine className="size-4" />
@@ -100,20 +170,34 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           {showAddPreset && (
-            <div className="mb-3 flex items-center gap-2">
-              <input
-                type="number"
-                value={newPreset}
-                onChange={(e) => setNewPreset(e.target.value)}
-                className="h-10 w-24 rounded-lg border border-input bg-transparent px-3 text-center font-semibold outline-none focus:border-primary"
-                min={1}
-                max={5000}
-                autoFocus
-              />
-              <span className="text-sm text-muted-foreground">ml</span>
-              <Button size="icon" variant="default" onClick={handleAddPreset}>
-                <RiCheckLine className="size-4" />
-              </Button>
+            <div className="mb-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={newPreset}
+                  onChange={(e) => {
+                    setNewPreset(e.target.value);
+                    if (presetError) setPresetError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddPreset();
+                  }}
+                  aria-label="New preset amount in milliliters"
+                  className={`h-10 w-24 rounded-lg border bg-transparent px-3 text-center font-semibold outline-none focus:border-primary ${
+                    presetError ? "border-destructive" : "border-input"
+                  }`}
+                  min={50}
+                  max={2000}
+                  autoFocus
+                />
+                <span className="text-sm text-muted-foreground">ml</span>
+                <Button size="icon" variant="default" onClick={handleAddPreset}>
+                  <RiCheckLine className="size-4" />
+                </Button>
+              </div>
+              {presetError && (
+                <p className="mt-1 text-xs text-destructive">{presetError}</p>
+              )}
             </div>
           )}
           <div className="flex flex-wrap gap-2">

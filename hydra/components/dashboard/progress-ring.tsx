@@ -54,17 +54,17 @@ export function ProgressRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           className={`motion-safe:transition-all motion-safe:duration-700 ease-out ${
-            isComplete ? "text-emerald-500" : "text-primary"
+            isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-primary"
           }`}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {isComplete ? (
           <>
-            <span className="text-3xl font-bold text-emerald-500">
+            <span className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
               {Math.round((current / 1000) * 10) / 10}L
             </span>
-            <span className="mt-0.5 text-sm font-medium text-emerald-500">
+            <span className="mt-0.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
               Goal reached!
             </span>
           </>
